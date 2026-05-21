@@ -167,3 +167,13 @@
   0%, 100% { transform: translateY(-4px); }
   50% { transform: translateY(0); }
 }
+
+@keyframes wobble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px) rotate(-1deg); }
+  75% { transform: translateX(1px) rotate(1deg); }
+}
+
+.body.wobble {
+  animation: wobble 0.1s infinite;
+}

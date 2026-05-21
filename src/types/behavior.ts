@@ -10,7 +10,8 @@ export type BehaviorState =
   | 'SQUISH_V'
   | 'SQUISH_H'
   | 'DRAGGING'
-  | 'ITEM_LEAF';
+  | 'ITEM_LEAF'
+  | 'WOBBLE';
 
 export interface Position {
   x: number;

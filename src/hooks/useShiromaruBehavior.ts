@@ -84,17 +84,18 @@ export const useShiromaruBehavior = (
   useEffect(() => {
     const pickNextState = () => {
       const rand = Math.random();
-      if (rand < 0.6) return 'IDLE';
-      if (rand < 0.8) return 'WALK';
-      if (rand < 0.9) return 'SIT';
-      if (rand < 0.93) return 'SLEEP';
-      if (rand < 0.97) return 'ITEM_LEAF';
+      if (rand < 0.4) return 'IDLE';
+      if (rand < 0.7) return 'WALK';
+      if (rand < 0.8) return 'SIT';
+      if (rand < 0.85) return 'SLEEP';
+      if (rand < 0.9) return 'ITEM_LEAF';
+      if (rand < 0.95) return 'WOBBLE';
       return 'RUN';
     };
 
     const runStateCycle = () => {
       // Don't transition if interacting
-      const interactionStates: BehaviorState[] = ['TRIP', 'POKE', 'SLIDE', 'SQUISH_V', 'SQUISH_H', 'DRAGGING', 'ITEM_LEAF'];
+      const interactionStates: BehaviorState[] = ['TRIP', 'POKE', 'SLIDE', 'SQUISH_V', 'SQUISH_H', 'DRAGGING', 'ITEM_LEAF', 'WOBBLE'];
       if (interactionStates.includes(state)) return;
       if (Object.values(keysRef.current).some(v => v)) return;
 
@@ -108,14 +109,29 @@ export const useShiromaruBehavior = (
         });
       }
 
+      if (next === 'SLEEP') {
+        // Higher chance to move to the edge before sleeping
+        if (Math.random() < 0.7) {
+          const side = Math.floor(Math.random() * 4);
+          let tx = Math.random() * (window.innerWidth - 60);
+          let ty = Math.random() * (window.innerHeight - 60);
+          if (side === 0) tx = 10; // Left
+          if (side === 1) tx = window.innerWidth - 70; // Right
+          if (side === 2) ty = 10; // Top
+          if (side === 3) ty = window.innerHeight - 70; // Bottom
+          setTargetPos({ x: tx, y: ty });
+        }
+      }
+
       // Default duration
       let duration = 2000 + Math.random() * 5000;
 
-      // Custom duration for items
-      if (next === 'ITEM_LEAF') {
-        duration = 10000; // 10 seconds
+      // Custom duration for items/wobble
+      if (next === 'ITEM_LEAF' || next === 'WOBBLE') {
+        duration = next === 'WOBBLE' ? 3000 : 10000;
         stateTimerRef.current = window.setTimeout(() => {
           setState('IDLE');
+          stateTimerRef.current = window.setTimeout(runStateCycle, 1000);
         }, duration);
         return;
       }

@@ -17,6 +17,7 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, onMouseDo
     state === 'SQUISH_V' ? styles.squishV : '',
     state === 'SQUISH_H' ? styles.squishH : '',
     state === 'DRAGGING' ? styles.dragging : '',
+    state === 'WOBBLE' ? styles.wobble : '',
     (state === 'WALK' || state === 'RUN') ? styles.walking : ''
   ].join(' ');
 
