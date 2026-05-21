@@ -1,0 +1,158 @@
+.container {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.1s ease-out;
+  user-select: none;
+  touch-action: none;
+}
+
+.body {
+  position: relative;
+  width: 50px;
+  height: 45px;
+  background-color: #fff;
+  border: 2px solid #333;
+  border-radius: 50% 50% 45% 45%;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Squishy breathing animation */
+.body.idle {
+  animation: breathe 3s infinite ease-in-out;
+}
+
+.body.sleep {
+  height: 35px;
+  border-radius: 60% 60% 40% 40%;
+  animation: deepBreathe 5s infinite ease-in-out;
+}
+
+.body.trip {
+  transform: rotate(90deg) scaleY(0.8);
+}
+
+.body.squishV {
+  transform: scaleY(0.4) translateY(40px);
+  border-radius: 70% 70% 30% 30%;
+}
+
+.body.squishH {
+  transform: scaleX(0.4);
+  border-radius: 30% 30% 70% 70%;
+}
+
+.body.dragging {
+  transform: scale(1.1, 0.9) translateY(-10px);
+  box-shadow: 0 15px 20px rgba(0,0,0,0.1);
+  border-bottom-width: 4px; /* Slight stretch at the bottom */
+}
+
+/* Items */
+.item {
+  position: absolute;
+  z-index: 5;
+  transition: all 0.5s ease-out;
+}
+
+.leaf {
+  top: -15px;
+  left: 15px;
+  width: 20px;
+  height: 12px;
+  background-color: #8bc34a;
+  border: 1.5px solid #333;
+  border-radius: 0 100% 0 100%;
+  transform-origin: bottom right;
+  animation: leafWave 2s infinite ease-in-out;
+}
+
+.leaf::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background-color: #333;
+}
+
+@keyframes leafWave {
+  0%, 100% { transform: rotate(5deg); }
+  50% { transform: rotate(-10deg); }
+}
+
+/* Eyes */
+.eye {
+  position: absolute;
+  top: 18px;
+  width: 4px;
+  height: 4px;
+  background-color: #333;
+  border-radius: 50%;
+}
+
+.eyeLeft {
+  left: 15px;
+}
+
+.eyeRight {
+  right: 15px;
+}
+
+.sleep .eye {
+  height: 1px;
+  background-color: #666;
+}
+
+/* Legs */
+.leg {
+  position: absolute;
+  bottom: -2px;
+  width: 8px;
+  height: 6px;
+  background-color: #fff;
+  border: 2px solid #333;
+  border-radius: 40%;
+}
+
+.legLeft {
+  left: 10px;
+}
+
+.legRight {
+  right: 10px;
+}
+
+.walking .legLeft {
+  animation: walkLeft 0.4s infinite;
+}
+
+.walking .legRight {
+  animation: walkRight 0.4s infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05, 0.95); }
+}
+
+@keyframes deepBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.1, 0.85); opacity: 1; }
+}
+
+@keyframes walkLeft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes walkRight {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(0); }
+}
