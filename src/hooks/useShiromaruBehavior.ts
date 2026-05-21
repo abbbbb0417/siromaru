@@ -14,11 +14,24 @@ export const useShiromaruBehavior = (
   const stateTimerRef = useRef<number | null>(null);
   const moveRef = useRef<number | null>(null);
   const keysRef = useRef<{ [key: string]: boolean }>({});
+  const rollVelocityRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
 
   const handlePoke = useCallback(() => {
     setState('TRIP');
     if (stateTimerRef.current) clearTimeout(stateTimerRef.current);
-    setTimeout(() => setState('IDLE'), 3000);
+    
+    // Set a random roll direction and speed
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 8 + Math.random() * 5;
+    rollVelocityRef.current = {
+      x: Math.cos(angle) * speed,
+      y: Math.sin(angle) * speed
+    };
+
+    setTimeout(() => {
+      setState('IDLE');
+      rollVelocityRef.current = { x: 0, y: 0 };
+    }, 2000);
   }, []);
 
   const handleSquishV = useCallback(() => {
@@ -135,6 +148,15 @@ export const useShiromaruBehavior = (
         if (movingManually) {
           if (state !== 'WALK') setState('WALK');
           setTargetPos(null);
+        }
+
+        // Rolling Momentum
+        if (state === 'TRIP') {
+          nextX += rollVelocityRef.current.x;
+          nextY += rollVelocityRef.current.y;
+          // Apply friction
+          rollVelocityRef.current.x *= 0.98;
+          rollVelocityRef.current.y *= 0.98;
         }
 
         if (!movingManually && isSensorEnabled && orientation.beta !== null && orientation.gamma !== null) {
