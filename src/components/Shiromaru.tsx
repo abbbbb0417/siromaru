@@ -5,10 +5,13 @@ import styles from './Shiromaru.module.css';
 interface ShiromaruProps {
   state: BehaviorState;
   position: Position;
+  mousePos: Position;
+  isVanishing?: boolean;
   onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
-export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, onMouseDown }) => {
+export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos, isVanishing, onMouseDown, onDoubleClick }) => {
   const bodyClass = [
     styles.body,
     state === 'IDLE' ? styles.idle : '',
@@ -18,12 +21,26 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, onMouseDo
     state === 'SQUISH_H' ? styles.squishH : '',
     state === 'DRAGGING' ? styles.dragging : '',
     state === 'WOBBLE' ? styles.wobble : '',
-    (state === 'WALK' || state === 'RUN') ? styles.walking : ''
+    state === 'HAPPY' ? styles.happy : '',
+    (state === 'WALK' || state === 'RUN' || state === 'FOLLOW_MOUSE') ? styles.walking : '',
+    state === 'LOOK_AT_CURSOR' ? styles.looking : ''
   ].join(' ');
+
+  // Calculate eye offset based on mouse position
+  const dx = mousePos.x - (position.x + 30);
+  const dy = mousePos.y - (position.y + 30);
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxOffset = 3;
+  const offsetX = dist > 0 ? (dx / dist) * Math.min(dist / 50, maxOffset) : 0;
+  const offsetY = dist > 0 ? (dy / dist) * Math.min(dist / 50, maxOffset) : 0;
+
+  const eyeStyle = (state === 'LOOK_AT_CURSOR' || state === 'FOLLOW_MOUSE') ? {
+    transform: `translate(${offsetX}px, ${offsetY}px)`
+  } : {};
 
   return (
     <div 
-      className={styles.container}
+      className={`${styles.container} ${isVanishing ? styles.vanishing : ''}`}
       style={{ 
         left: position.x, 
         top: position.y,
@@ -32,11 +49,28 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, onMouseDo
       }}
       onMouseDown={onMouseDown}
       onTouchStart={onMouseDown}
+      onDoubleClick={onDoubleClick}
     >
       <div className={bodyClass}>
+        {isVanishing && (
+          <>
+            <div className={`${styles.particle} ${styles.p1}`} />
+            <div className={`${styles.particle} ${styles.p2}`} />
+            <div className={`${styles.particle} ${styles.p3}`} />
+            <div className={`${styles.particle} ${styles.p4}`} />
+            <div className={`${styles.particle} ${styles.p5}`} />
+          </>
+        )}
         {state === 'ITEM_LEAF' && <div className={`${styles.item} ${styles.leaf}`} />}
-        <div className={`${styles.eye} ${styles.eyeLeft}`} />
-        <div className={`${styles.eye} ${styles.eyeRight}`} />
+        {state === 'HAPPY' && (
+          <>
+            <div className={`${styles.note} ${styles.note1}`}>♪</div>
+            <div className={`${styles.note} ${styles.note2}`}>♪</div>
+            <div className={`${styles.note} ${styles.note3}`}>♪</div>
+          </>
+        )}
+        <div className={`${styles.eye} ${styles.eyeLeft}`} style={eyeStyle} />
+        <div className={`${styles.eye} ${styles.eyeRight}`} style={eyeStyle} />
         <div className={`${styles.leg} ${styles.legLeft}`} />
         <div className={`${styles.leg} ${styles.legRight}`} />
       </div>

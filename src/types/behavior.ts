@@ -11,7 +11,10 @@ export type BehaviorState =
   | 'SQUISH_H'
   | 'DRAGGING'
   | 'ITEM_LEAF'
-  | 'WOBBLE';
+  | 'WOBBLE'
+  | 'HAPPY'
+  | 'FOLLOW_MOUSE'
+  | 'LOOK_AT_CURSOR';
 
 export interface Position {
   x: number;

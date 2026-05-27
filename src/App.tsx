@@ -1,11 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Shiromaru } from './components/Shiromaru';
-import { useShiromaruBehavior } from './hooks/useShiromaruBehavior';
+import React, { useState, useEffect } from 'react';
+import { ShiromaruInstance } from './components/ShiromaruInstance';
 import { Orientation } from './types/behavior';
+
+interface ShiromaruData {
+  id: string;
+  initialX: number;
+  initialY: number;
+  isVanishing?: boolean;
+  createdAt?: number;
+}
 
 const App: React.FC = () => {
   const [isSensorEnabled, setIsSensorEnabled] = useState(false);
+  const [isPersistenceEnabled, setIsPersistenceEnabled] = useState(false);
   const [orientation, setOrientation] = useState<Orientation>({ alpha: null, beta: null, gamma: null });
+  const [shiromarus, setShiromarus] = useState<ShiromaruData[]>([
+    { id: 'original', initialX: window.innerWidth / 2 - 30, initialY: window.innerHeight / 2 - 30, isVanishing: false }
+  ]);
 
   useEffect(() => {
     if (!isSensorEnabled) return;
@@ -22,9 +33,49 @@ const App: React.FC = () => {
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, [isSensorEnabled]);
 
+  // Handle split lifetime management
+  useEffect(() => {
+    if (isPersistenceEnabled) {
+      // If persistence is enabled, ensure no one is in vanishing state (except if they were already scheduled to)
+      // Actually, if persistence is ON, we just stop the timer.
+      // But what if someone was already vanishing?
+      setShiromarus(prev => prev.map(s => s.id !== 'original' ? { ...s, isVanishing: false } : s));
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setShiromarus(prev => {
+        let changed = false;
+        const next = prev.map(s => {
+          if (s.id === 'original' || !s.createdAt) return s;
+          const age = now - s.createdAt;
+          
+          // 44s for vanishing state
+          if (age > 44000 && !s.isVanishing) {
+            changed = true;
+            return { ...s, isVanishing: true };
+          }
+          return s;
+        }).filter(s => {
+          if (s.id === 'original' || !s.createdAt) return true;
+          const age = now - s.createdAt;
+          // 45s for removal
+          if (age > 45000) {
+            changed = true;
+            return false;
+          }
+          return true;
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPersistenceEnabled]);
+
   const toggleSensor = async () => {
     if (!isSensorEnabled) {
-      // Check for iOS permission requirement
       if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
         try {
           const permission = await (DeviceOrientationEvent as any).requestPermission();
@@ -42,69 +93,22 @@ const App: React.FC = () => {
     }
   };
 
-  const { 
-    state, 
-    position, 
-    handlePoke, 
-    handleSquishV, 
-    handleSquishH,
-    startDragging,
-    updateDragging,
-    stopDragging
-  } = useShiromaruBehavior(
-    window.innerWidth / 2 - 30,
-    window.innerHeight / 2 - 30,
-    orientation,
-    isSensorEnabled
-  );
-
-  const [isMouseDown, setIsMouseDown] = useState(false);
-  const longPressTimer = useRef<number | null>(null);
-
-  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsMouseDown(true);
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    longPressTimer.current = window.setTimeout(() => {
-      startDragging(clientX, clientY);
-    }, 200); // Trigger drag after 200ms
+  const broadcastCommand = (cmd: string) => {
+    window.dispatchEvent(new CustomEvent('shiromaru-command', { detail: cmd }));
   };
 
-  useEffect(() => {
-    const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
-      if (state === 'DRAGGING') {
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        updateDragging(clientX, clientY);
-      }
+  const handleSplit = (_id: string, x: number, y: number) => {
+    const newId = 'split-' + Date.now();
+    const newShiromaru: ShiromaruData = {
+      id: newId,
+      initialX: x + 20,
+      initialY: y + 20,
+      isVanishing: false,
+      createdAt: Date.now()
     };
-
-    const handleGlobalUp = () => {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-      if (state === 'DRAGGING') {
-        stopDragging();
-      } else if (isMouseDown) {
-        handlePoke(); // If it wasn't a long press, it's a poke
-      }
-      setIsMouseDown(false);
-    };
-
-    window.addEventListener('mousemove', handleGlobalMove);
-    window.addEventListener('touchmove', handleGlobalMove, { passive: false });
-    window.addEventListener('mouseup', handleGlobalUp);
-    window.addEventListener('touchend', handleGlobalUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleGlobalMove);
-      window.removeEventListener('touchmove', handleGlobalMove);
-      window.removeEventListener('mouseup', handleGlobalUp);
-      window.removeEventListener('touchend', handleGlobalUp);
-    };
-  }, [state, isMouseDown, startDragging, updateDragging, stopDragging, handlePoke]);
+    
+    setShiromarus(prev => [...prev, newShiromaru]);
+  };
 
   const btnStyle = {
     padding: '8px 12px',
@@ -117,11 +121,34 @@ const App: React.FC = () => {
     userSelect: 'none' as const
   };
 
+  const labelStyle = { 
+    fontSize: '12px', 
+    color: '#888', 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: '8px',
+    cursor: 'pointer',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: '8px 12px',
+    borderRadius: '20px',
+    border: '1px solid #eee'
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      <Shiromaru state={state} position={position} onMouseDown={handleMouseDown} />
+      {shiromarus.map(s => (
+        <ShiromaruInstance
+          key={s.id}
+          id={s.id}
+          initialX={s.initialX}
+          initialY={s.initialY}
+          orientation={orientation}
+          isSensorEnabled={isSensorEnabled}
+          isVanishing={s.isVanishing}
+          onSplit={handleSplit}
+        />
+      ))}
       
-      {/* Control Panel */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
@@ -133,30 +160,30 @@ const App: React.FC = () => {
         zIndex: 100
       }}>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={btnStyle} onClick={handleSquishV}>上からつぶす</button>
-          <button style={btnStyle} onClick={handleSquishH}>横からつぶす</button>
-          <button style={btnStyle} onClick={handlePoke}>転がす</button>
+          <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_V')}>上からつぶす</button>
+          <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_H')}>横からつぶす</button>
+          <button style={btnStyle} onClick={() => broadcastCommand('POKE')}>転がす</button>
         </div>
-        <label style={{ 
-          fontSize: '12px', 
-          color: '#888', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          cursor: 'pointer',
-          backgroundColor: 'rgba(255,255,255,0.8)',
-          padding: '8px 12px',
-          borderRadius: '20px',
-          border: '1px solid #eee'
-        }}>
-          <span>傾きセンサー {isSensorEnabled ? 'ON' : 'OFF'}</span>
-          <input 
-            type="checkbox" 
-            checked={isSensorEnabled} 
-            onChange={toggleSensor} 
-            style={{ width: '16px', height: '16px' }}
-          />
-        </label>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <label style={labelStyle}>
+            <span>分裂を維持 {isPersistenceEnabled ? 'ON' : 'OFF'}</span>
+            <input 
+              type="checkbox" 
+              checked={isPersistenceEnabled} 
+              onChange={() => setIsPersistenceEnabled(!isPersistenceEnabled)} 
+              style={{ width: '16px', height: '16px' }}
+            />
+          </label>
+          <label style={labelStyle}>
+            <span>傾きセンサー {isSensorEnabled ? 'ON' : 'OFF'}</span>
+            <input 
+              type="checkbox" 
+              checked={isSensorEnabled} 
+              onChange={toggleSensor} 
+              style={{ width: '16px', height: '16px' }}
+            />
+          </label>
+        </div>
       </div>
     </div>
   );

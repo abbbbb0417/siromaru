@@ -27,6 +27,11 @@
   animation: breathe 3s infinite ease-in-out;
 }
 
+.body.looking {
+  animation: breathe 1.5s infinite ease-in-out;
+  transform: scale(1.02);
+}
+
 .body.sleep {
   height: 35px;
   border-radius: 60% 60% 40% 40%;
@@ -108,6 +113,14 @@
   border-radius: 50%;
 }
 
+.happy .eye {
+  height: 2px;
+  border-radius: 50% 50% 0 0;
+  background-color: transparent;
+  border-top: 2px solid #333;
+  top: 16px;
+}
+
 .eyeLeft {
   left: 15px;
 }
@@ -119,6 +132,50 @@
 .sleep .eye {
   height: 1px;
   background-color: #666;
+}
+
+/* Notes */
+.note {
+  position: absolute;
+  font-size: 14px;
+  color: #ff4081;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.note1 {
+  top: -10px;
+  left: -5px;
+  animation: noteFloat 2s infinite ease-out;
+}
+
+.note2 {
+  top: -20px;
+  left: 20px;
+  animation: noteFloat 2s infinite ease-out 0.6s;
+}
+
+.note3 {
+  top: -10px;
+  left: 45px;
+  animation: noteFloat 2s infinite ease-out 1.2s;
+}
+
+@keyframes noteFloat {
+  0% { transform: translateY(0) rotate(0); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-30px) rotate(20deg); opacity: 0; }
+}
+
+@keyframes happyJump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.05, 0.95); }
+}
+
+.body.happy {
+  animation: happyJump 0.6s infinite ease-in-out;
 }
 
 /* Legs */
@@ -176,4 +233,39 @@
 
 .body.wobble {
   animation: wobble 0.1s infinite;
+}
+
+/* Vanishing Effect */
+.vanishing {
+  animation: vanish 1s forwards ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes vanish {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.5); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #fff;
+  border: 1px solid #333;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+}
+
+.p1 { animation: particleFloat 1s forwards ease-out 0s; left: 10px; top: 10px; }
+.p2 { animation: particleFloat 1s forwards ease-out 0.1s; left: 40px; top: 5px; }
+.p3 { animation: particleFloat 1s forwards ease-out 0.2s; left: 25px; top: 30px; }
+.p4 { animation: particleFloat 1s forwards ease-out 0.3s; left: 5px; top: 40px; }
+.p5 { animation: particleFloat 1s forwards ease-out 0.4s; left: 45px; top: 35px; }
+
+@keyframes particleFloat {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-50px) scale(0.5); opacity: 0; }
 }
