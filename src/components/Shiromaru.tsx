@@ -7,11 +7,13 @@ interface ShiromaruProps {
   position: Position;
   mousePos: Position;
   isVanishing?: boolean;
+  isGiant?: boolean;
+  isMerging?: boolean;
   onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
   onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
-export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos, isVanishing, onMouseDown, onDoubleClick }) => {
+export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos, isVanishing, isGiant, isMerging, onMouseDown, onDoubleClick }) => {
   const bodyClass = [
     styles.body,
     state === 'IDLE' ? styles.idle : '',
@@ -23,7 +25,8 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos,
     state === 'WOBBLE' ? styles.wobble : '',
     state === 'HAPPY' ? styles.happy : '',
     (state === 'WALK' || state === 'RUN' || state === 'FOLLOW_MOUSE') ? styles.walking : '',
-    state === 'LOOK_AT_CURSOR' ? styles.looking : ''
+    state === 'LOOK_AT_CURSOR' ? styles.looking : '',
+    isGiant ? styles.giant : ''
   ].join(' ');
 
   // Calculate eye offset based on mouse position
@@ -59,6 +62,18 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos,
             <div className={`${styles.particle} ${styles.p3}`} />
             <div className={`${styles.particle} ${styles.p4}`} />
             <div className={`${styles.particle} ${styles.p5}`} />
+          </>
+        )}
+        {isMerging && (
+          <>
+            <div className={`${styles.mergeParticle} ${styles.mp1}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp2}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp3}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp4}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp5}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp6}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp7}`} />
+            <div className={`${styles.mergeParticle} ${styles.mp8}`} />
           </>
         )}
         {state === 'ITEM_LEAF' && <div className={`${styles.item} ${styles.leaf}`} />}

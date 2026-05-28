@@ -10,7 +10,12 @@ interface ShiromaruInstanceProps {
   orientation: Orientation;
   isSensorEnabled: boolean;
   isVanishing?: boolean;
+  isGiant?: boolean;
+  isMerging?: boolean;
   onSplit: (id: string, x: number, y: number) => void;
+  onMerge: (sourceId: string, targetId: string) => void;
+  onReportPosition: (id: string, x: number, y: number) => void;
+  positionsRef: React.MutableRefObject<Record<string, {x: number, y: number}>>;
 }
 
 export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
@@ -20,7 +25,12 @@ export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
   orientation,
   isSensorEnabled,
   isVanishing,
-  onSplit
+  isGiant,
+  isMerging,
+  onSplit,
+  onMerge,
+  onReportPosition,
+  positionsRef
 }) => {
   const { 
     state, 
@@ -43,10 +53,11 @@ export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
   const clickTimerRef = useRef<number | null>(null);
   const lastPositionRef = useRef(position);
 
-  // Keep lastPositionRef up to date
+  // Keep lastPositionRef up to date and report position
   useEffect(() => {
     lastPositionRef.current = position;
-  }, [position]);
+    onReportPosition(id, position.x, position.y);
+  }, [position, id, onReportPosition]);
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     setIsMouseDown(true);
@@ -64,6 +75,20 @@ export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
         const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
         const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
         updateDragging(clientX, clientY);
+
+        // Check for merge
+        const myX = clientX - 30; // Center offset
+        const myY = clientY - 30;
+
+        Object.entries(positionsRef.current).forEach(([otherId, pos]) => {
+          if (otherId === id) return;
+          const dx = myX - pos.x;
+          const dy = myY - pos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 40) {
+            onMerge(id, otherId);
+          }
+        });
       }
     };
 
@@ -126,6 +151,8 @@ export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
       position={position} 
       mousePos={mousePos}
       isVanishing={isVanishing}
+      isGiant={isGiant}
+      isMerging={isMerging}
       onMouseDown={handleMouseDown}
     />
   );

@@ -269,3 +269,39 @@
   20% { opacity: 1; }
   100% { transform: translateY(-50px) scale(0.5); opacity: 0; }
 }
+
+/* Giant state */
+.body.giant {
+  transform: scale(2.5);
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(255, 235, 59, 0.3);
+  border-color: #ffeb3b;
+}
+
+/* Merge Particles */
+.mergeParticle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #fff;
+  border: 1px solid #ffeb3b;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 30;
+  box-shadow: 0 0 10px #fff700;
+}
+
+.mp1 { animation: mergeParticleFloat 1s forwards ease-out; left: 25px; top: 20px; --dx: -60px; --dy: -60px; }
+.mp2 { animation: mergeParticleFloat 1s forwards ease-out 0.05s; left: 25px; top: 20px; --dx: 60px; --dy: -60px; }
+.mp3 { animation: mergeParticleFloat 1s forwards ease-out 0.1s; left: 25px; top: 20px; --dx: -60px; --dy: 60px; }
+.mp4 { animation: mergeParticleFloat 1s forwards ease-out 0.15s; left: 25px; top: 20px; --dx: 60px; --dy: 60px; }
+.mp5 { animation: mergeParticleFloat 1s forwards ease-out 0.2s; left: 25px; top: 20px; --dx: 0px; --dy: -90px; }
+.mp6 { animation: mergeParticleFloat 1s forwards ease-out 0.25s; left: 25px; top: 20px; --dx: 0px; --dy: 90px; }
+.mp7 { animation: mergeParticleFloat 1s forwards ease-out 0.3s; left: 25px; top: 20px; --dx: -90px; --dy: 0px; }
+.mp8 { animation: mergeParticleFloat 1s forwards ease-out 0.35s; left: 25px; top: 20px; --dx: 90px; --dy: 0px; }
+
+@keyframes mergeParticleFloat {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  20% { opacity: 1; transform: translate(0, 0) scale(2); }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.5) rotate(180deg); opacity: 0; }
+}

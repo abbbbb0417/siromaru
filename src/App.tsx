@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShiromaruInstance } from './components/ShiromaruInstance';
 import { Orientation } from './types/behavior';
 
@@ -8,15 +8,19 @@ interface ShiromaruData {
   initialY: number;
   isVanishing?: boolean;
   createdAt?: number;
+  isGiant?: boolean;
+  isMerging?: boolean;
 }
 
 const App: React.FC = () => {
   const [isSensorEnabled, setIsSensorEnabled] = useState(false);
   const [isPersistenceEnabled, setIsPersistenceEnabled] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [orientation, setOrientation] = useState<Orientation>({ alpha: null, beta: null, gamma: null });
   const [shiromarus, setShiromarus] = useState<ShiromaruData[]>([
     { id: 'original', initialX: window.innerWidth / 2 - 30, initialY: window.innerHeight / 2 - 30, isVanishing: false }
   ]);
+  const positionsRef = useRef<Record<string, {x: number, y: number}>>({});
 
   useEffect(() => {
     if (!isSensorEnabled) return;
@@ -97,6 +101,35 @@ const App: React.FC = () => {
     window.dispatchEvent(new CustomEvent('shiromaru-command', { detail: cmd }));
   };
 
+  const handleMerge = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+
+    setShiromarus(prev => {
+      const targetExists = prev.find(s => s.id === targetId);
+      if (!targetExists) return prev;
+
+      return prev.filter(s => s.id !== targetId).map(s => {
+        if (s.id === sourceId) {
+          return { ...s, isGiant: true, isMerging: true };
+        }
+        return s;
+      });
+    });
+
+    // Cleanup positionsRef
+    delete positionsRef.current[targetId];
+
+    setTimeout(() => {
+      setShiromarus(prev => prev.map(s => 
+        s.id === sourceId ? { ...s, isGiant: false, isMerging: false } : s
+      ));
+    }, 1000);
+  };
+
+  const handleReportPosition = (id: string, x: number, y: number) => {
+    positionsRef.current[id] = { x, y };
+  };
+
   const handleSplit = (_id: string, x: number, y: number) => {
     const newId = 'split-' + Date.now();
     const newShiromaru: ShiromaruData = {
@@ -145,44 +178,94 @@ const App: React.FC = () => {
           orientation={orientation}
           isSensorEnabled={isSensorEnabled}
           isVanishing={s.isVanishing}
+          isGiant={s.isGiant}
+          isMerging={s.isMerging}
           onSplit={handleSplit}
+          onMerge={handleMerge}
+          onReportPosition={handleReportPosition}
+          positionsRef={positionsRef}
         />
       ))}
-      
+
+      {/* Control Panel Toggle */}
+      <button 
+        onClick={() => setIsPanelOpen(!isPanelOpen)}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          border: '1px solid #ddd',
+          backgroundColor: '#fff',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          zIndex: 110,
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          fontSize: '20px'
+        }}
+      >
+        {isPanelOpen ? '×' : '⚙️'}
+      </button>
+
+      {/* Control Panel Content */}
       <div style={{
         position: 'absolute',
-        bottom: '20px',
+        bottom: '70px',
         right: '20px',
+        width: '260px',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '16px',
+        padding: '20px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: '10px',
-        zIndex: 100
+        gap: '15px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isPanelOpen ? 1 : 0,
+        transform: isPanelOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
+        pointerEvents: isPanelOpen ? 'auto' : 'none'
       }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_V')}>上からつぶす</button>
-          <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_H')}>横からつぶす</button>
-          <button style={btnStyle} onClick={() => broadcastCommand('POKE')}>転がす</button>
+        
+        {/* Actions Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase' }}>アクション</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_V')}>上から</button>
+            <button style={btnStyle} onClick={() => broadcastCommand('SQUISH_H')}>横から</button>
+            <button style={btnStyle} onClick={() => broadcastCommand('POKE')}>転がす</button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <label style={labelStyle}>
-            <span>分裂を維持 {isPersistenceEnabled ? 'ON' : 'OFF'}</span>
-            <input 
-              type="checkbox" 
-              checked={isPersistenceEnabled} 
-              onChange={() => setIsPersistenceEnabled(!isPersistenceEnabled)} 
-              style={{ width: '16px', height: '16px' }}
-            />
-          </label>
-          <label style={labelStyle}>
-            <span>傾きセンサー {isSensorEnabled ? 'ON' : 'OFF'}</span>
-            <input 
-              type="checkbox" 
-              checked={isSensorEnabled} 
-              onChange={toggleSensor} 
-              style={{ width: '16px', height: '16px' }}
-            />
-          </label>
+
+        {/* Settings Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase' }}>設定</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={labelStyle}>
+              <span>分裂を維持</span>
+              <input 
+                type="checkbox" 
+                checked={isPersistenceEnabled} 
+                onChange={() => setIsPersistenceEnabled(!isPersistenceEnabled)} 
+                style={{ width: '16px', height: '16px' }}
+              />
+            </label>
+            <label style={labelStyle}>
+              <span>傾きセンサー</span>
+              <input 
+                type="checkbox" 
+                checked={isSensorEnabled} 
+                onChange={toggleSensor} 
+                style={{ width: '16px', height: '16px' }}
+              />
+            </label>
+          </div>
         </div>
       </div>
     </div>
