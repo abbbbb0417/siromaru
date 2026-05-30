@@ -21,6 +21,9 @@ const App: React.FC = () => {
     { id: 'original', initialX: window.innerWidth / 2 - 30, initialY: window.innerHeight / 2 - 30, isVanishing: false }
   ]);
   const positionsRef = useRef<Record<string, {x: number, y: number}>>({});
+  
+  const mergeTimerRef = useRef<Record<string, number>>({});
+  const mergingEffectTimerRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (!isSensorEnabled) return;
@@ -37,12 +40,8 @@ const App: React.FC = () => {
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, [isSensorEnabled]);
 
-  // Handle split lifetime management
   useEffect(() => {
     if (isPersistenceEnabled) {
-      // If persistence is enabled, ensure no one is in vanishing state (except if they were already scheduled to)
-      // Actually, if persistence is ON, we just stop the timer.
-      // But what if someone was already vanishing?
       setShiromarus(prev => prev.map(s => s.id !== 'original' ? { ...s, isVanishing: false } : s));
       return;
     }
@@ -50,12 +49,18 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       const now = Date.now();
       setShiromarus(prev => {
+        const splitOnes = prev.filter(s => s.id !== 'original' && s.createdAt);
         let changed = false;
+
+        // 一番新しい（createdAtが一番大きい）しろまるを特定して、それは消さないようにする
+        const sortedSplitOnes = [...splitOnes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const youngestId = sortedSplitOnes.length > 0 ? sortedSplitOnes[0].id : null;
+
         const next = prev.map(s => {
           if (s.id === 'original' || !s.createdAt) return s;
+          if (s.id === youngestId) return s;
+
           const age = now - s.createdAt;
-          
-          // 44s for vanishing state
           if (age > 44000 && !s.isVanishing) {
             changed = true;
             return { ...s, isVanishing: true };
@@ -63,8 +68,9 @@ const App: React.FC = () => {
           return s;
         }).filter(s => {
           if (s.id === 'original' || !s.createdAt) return true;
+          if (s.id === youngestId) return true;
+
           const age = now - s.createdAt;
-          // 45s for removal
           if (age > 45000) {
             changed = true;
             return false;
@@ -76,7 +82,7 @@ const App: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPersistenceEnabled]);
+  }, [isPersistenceEnabled, shiromarus.length]);
 
   const toggleSensor = async () => {
     if (!isSensorEnabled) {
@@ -101,29 +107,61 @@ const App: React.FC = () => {
     window.dispatchEvent(new CustomEvent('shiromaru-command', { detail: cmd }));
   };
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(mergeTimerRef.current).forEach(clearTimeout);
+      Object.values(mergingEffectTimerRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
   const handleMerge = (sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
 
+    const actualSource = targetId === 'original' ? 'original' : sourceId;
+    const actualTarget = targetId === 'original' ? sourceId : targetId;
+
     setShiromarus(prev => {
-      const targetExists = prev.find(s => s.id === targetId);
+      const targetExists = prev.find(s => s.id === actualTarget);
       if (!targetExists) return prev;
 
-      return prev.filter(s => s.id !== targetId).map(s => {
-        if (s.id === sourceId) {
-          return { ...s, isGiant: true, isMerging: true };
+      return prev.filter(s => s.id !== actualTarget).map(s => {
+        if (s.id === actualSource) {
+          const updated = { ...s, isGiant: true, isMerging: true };
+          if (s.id === 'original') {
+            delete updated.createdAt;
+          } else {
+            updated.createdAt = Date.now();
+          }
+          return updated;
         }
         return s;
       });
     });
 
-    // Cleanup positionsRef
-    delete positionsRef.current[targetId];
+    delete positionsRef.current[actualTarget];
 
-    setTimeout(() => {
-      setShiromarus(prev => prev.map(s => 
-        s.id === sourceId ? { ...s, isGiant: false, isMerging: false } : s
+    // エフェクト（黄色い枠線と粒子）は1秒で消す
+    if (mergingEffectTimerRef.current[actualSource]) {
+      clearTimeout(mergingEffectTimerRef.current[actualSource]);
+    }
+    mergingEffectTimerRef.current[actualSource] = window.setTimeout(() => {
+      setShiromarus(prev => prev.map(s =>
+        s.id === actualSource ? { ...s, isMerging: false } : s
       ));
+      delete mergingEffectTimerRef.current[actualSource];
     }, 1000);
+
+    // 巨大化状態は30秒維持
+    if (mergeTimerRef.current[actualSource]) {
+      clearTimeout(mergeTimerRef.current[actualSource]);
+    }
+    mergeTimerRef.current[actualSource] = window.setTimeout(() => {
+      setShiromarus(prev => prev.map(s =>
+        s.id === actualSource ? { ...s, isGiant: false } : s
+      ));
+      delete mergeTimerRef.current[actualSource];
+    }, 30000);
   };
 
   const handleReportPosition = (id: string, x: number, y: number) => {
@@ -139,7 +177,6 @@ const App: React.FC = () => {
       isVanishing: false,
       createdAt: Date.now()
     };
-    
     setShiromarus(prev => [...prev, newShiromaru]);
   };
 
@@ -154,11 +191,11 @@ const App: React.FC = () => {
     userSelect: 'none' as const
   };
 
-  const labelStyle = { 
-    fontSize: '12px', 
-    color: '#888', 
-    display: 'flex', 
-    alignItems: 'center', 
+  const labelStyle = {
+    fontSize: '12px',
+    color: '#888',
+    display: 'flex',
+    alignItems: 'center',
     gap: '8px',
     cursor: 'pointer',
     backgroundColor: 'rgba(255,255,255,0.8)',
@@ -187,8 +224,7 @@ const App: React.FC = () => {
         />
       ))}
 
-      {/* Control Panel Toggle */}
-      <button 
+      <button
         onClick={() => setIsPanelOpen(!isPanelOpen)}
         style={{
           position: 'absolute',
@@ -211,7 +247,6 @@ const App: React.FC = () => {
         {isPanelOpen ? '×' : '⚙️'}
       </button>
 
-      {/* Control Panel Content */}
       <div style={{
         position: 'absolute',
         bottom: '70px',
@@ -232,8 +267,6 @@ const App: React.FC = () => {
         transform: isPanelOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
         pointerEvents: isPanelOpen ? 'auto' : 'none'
       }}>
-        
-        {/* Actions Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase' }}>アクション</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -242,26 +275,24 @@ const App: React.FC = () => {
             <button style={btnStyle} onClick={() => broadcastCommand('POKE')}>転がす</button>
           </div>
         </div>
-
-        {/* Settings Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '11px', color: '#999', textTransform: 'uppercase' }}>設定</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={labelStyle}>
               <span>分裂を維持</span>
-              <input 
-                type="checkbox" 
-                checked={isPersistenceEnabled} 
-                onChange={() => setIsPersistenceEnabled(!isPersistenceEnabled)} 
+              <input
+                type="checkbox"
+                checked={isPersistenceEnabled}
+                onChange={() => setIsPersistenceEnabled(!isPersistenceEnabled)}
                 style={{ width: '16px', height: '16px' }}
               />
             </label>
             <label style={labelStyle}>
               <span>傾きセンサー</span>
-              <input 
-                type="checkbox" 
-                checked={isSensorEnabled} 
-                onChange={toggleSensor} 
+              <input
+                type="checkbox"
+                checked={isSensorEnabled}
+                onChange={toggleSensor}
                 style={{ width: '16px', height: '16px' }}
               />
             </label>

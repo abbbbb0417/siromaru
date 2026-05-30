@@ -271,11 +271,19 @@
 }
 
 /* Giant state */
-.body.giant {
+.container.giant {
   transform: scale(2.5);
   z-index: 100;
-  box-shadow: 0 10px 30px rgba(255, 235, 59, 0.3);
+}
+
+.giant .body {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Merging effect */
+.body.merging {
   border-color: #ffeb3b;
+  box-shadow: 0 0 20px rgba(255, 235, 59, 0.6);
 }
 
 /* Merge Particles */

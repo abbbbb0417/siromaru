@@ -26,7 +26,7 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos,
     state === 'HAPPY' ? styles.happy : '',
     (state === 'WALK' || state === 'RUN' || state === 'FOLLOW_MOUSE') ? styles.walking : '',
     state === 'LOOK_AT_CURSOR' ? styles.looking : '',
-    isGiant ? styles.giant : ''
+    isMerging ? styles.merging : ''
   ].join(' ');
 
   // Calculate eye offset based on mouse position
@@ -43,7 +43,7 @@ export const Shiromaru: React.FC<ShiromaruProps> = ({ state, position, mousePos,
 
   return (
     <div 
-      className={`${styles.container} ${isVanishing ? styles.vanishing : ''}`}
+      className={`${styles.container} ${isVanishing ? styles.vanishing : ''} ${isGiant ? styles.giant : ''}`}
       style={{ 
         left: position.x, 
         top: position.y,

@@ -98,12 +98,16 @@ export const ShiromaruInstance: React.FC<ShiromaruInstanceProps> = ({
         longPressTimer.current = null;
       }
 
-      if (state === 'DRAGGING') {
-        stopDragging();
-        setIsMouseDown(false);
-        return;
-      }
-
+     if (state === 'DRAGGING') {
+  stopDragging();
+  setIsMouseDown(false);
+  clickCountRef.current = 0;
+  if (clickTimerRef.current) {
+    clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = null;
+  }
+  return;
+}
       if (isMouseDown) {
         clickCountRef.current += 1;
         
