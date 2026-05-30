@@ -49,16 +49,10 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       const now = Date.now();
       setShiromarus(prev => {
-        const splitOnes = prev.filter(s => s.id !== 'original' && s.createdAt);
         let changed = false;
-
-        // 一番新しい（createdAtが一番大きい）しろまるを特定して、それは消さないようにする
-        const sortedSplitOnes = [...splitOnes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const youngestId = sortedSplitOnes.length > 0 ? sortedSplitOnes[0].id : null;
 
         const next = prev.map(s => {
           if (s.id === 'original' || !s.createdAt) return s;
-          if (s.id === youngestId) return s;
 
           const age = now - s.createdAt;
           if (age > 44000 && !s.isVanishing) {
@@ -68,7 +62,6 @@ const App: React.FC = () => {
           return s;
         }).filter(s => {
           if (s.id === 'original' || !s.createdAt) return true;
-          if (s.id === youngestId) return true;
 
           const age = now - s.createdAt;
           if (age > 45000) {
